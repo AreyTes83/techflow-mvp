@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Ticket, TicketStatus, TicketWithContext } from './types'
+import type { Ticket, TicketHistoryRow, TicketStatus, TicketWithContext } from './types'
 
 const TICKET_CONTEXT_SELECT =
   '*,store:stores!tickets_store_id_fkey(id,name),creator:users!tickets_created_by_fkey(id,full_name),assignee:users!tickets_tech_id_fkey(id,full_name)'
@@ -32,6 +32,18 @@ export async function listTicketsForManager(): Promise<TicketWithContext[]> {
     .order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []) as TicketWithContext[]
+}
+
+/** Лог змін статусів для списку тікетів (RLS як у перегляді тікета). */
+export async function listTicketHistoryForTicketIds(ticketIds: string[]): Promise<TicketHistoryRow[]> {
+  if (ticketIds.length === 0) return []
+  const { data, error } = await supabase
+    .from('ticket_history')
+    .select('id, ticket_id, changed_by, old_status, new_status, note, changed_at')
+    .in('ticket_id', ticketIds)
+    .order('changed_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as TicketHistoryRow[]
 }
 
 export async function createTicket(storeId: string, description: string): Promise<Ticket> {

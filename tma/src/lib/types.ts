@@ -34,3 +34,13 @@ export type TicketWithContext = Ticket & {
   assignee: TicketProfileEmbed | null
 }
 
+export type TicketHistoryRow = {
+  id: string
+  ticket_id: string
+  changed_by: string | null
+  old_status: TicketStatus | null
+  new_status: TicketStatus | null
+  note: string | null
+  changed_at: string
+}
+
