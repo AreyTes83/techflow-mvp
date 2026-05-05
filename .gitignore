@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Supabase CLI local cache
+supabase/.temp/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
