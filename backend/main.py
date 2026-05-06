@@ -124,6 +124,10 @@ async def async_main() -> None:
     settings = load_settings()
 
     logging.basicConfig(level=logging.INFO)
+    # Інакше кожне опитування Supabase/getUpdates засипає консоль (виглядає як «зациклення»).
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+
     tg = TelegramClient(settings.telegram_token)
 
     # Long polling не працює, якщо для бота активний webhook — знімаємо на старті.
@@ -147,7 +151,9 @@ async def async_main() -> None:
             )
         else:
             sb = SupabaseAdmin(url=api_url, service_role_key=settings.supabase_service_role_key)
-            notifier_task = asyncio.create_task(notifier_loop(tg, sb, NotifierState()))
+            notifier_task = asyncio.create_task(
+                notifier_loop(tg, sb, NotifierState(), poll_seconds=settings.notifier_poll_seconds)
+            )
             logger.info("Notifier enabled (API URL: %s)", api_url)
     else:
         logger.info("Notifier disabled (missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).")

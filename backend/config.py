@@ -18,6 +18,8 @@ class Settings:
     # Дозволені origins браузера для запитів із міні-апа.
     http_cors_origins: tuple[str, ...]
     tma_session_ttl_seconds: int
+    # MVP: надто частий опит із «порожніх» тікетів заливає консоль httpx INFO — збільшимо за замовчуванням.
+    notifier_poll_seconds: float
 
 
 def _parse_cors(tma_url: str, raw: str) -> tuple[str, ...]:
@@ -62,6 +64,13 @@ def load_settings() -> Settings:
     except ValueError:
         tma_ttl = 3600
 
+    poll_raw = os.getenv("NOTIFIER_POLL_SECONDS", "15").strip()
+    try:
+        notifier_poll = float(poll_raw)
+    except ValueError:
+        notifier_poll = 15.0
+    notifier_poll = max(2.0, notifier_poll)
+
     return Settings(
         telegram_token=telegram_token,
         tma_url=tma_url,
@@ -72,5 +81,6 @@ def load_settings() -> Settings:
         http_port=http_port,
         http_cors_origins=_parse_cors(tma_url, cors_raw),
         tma_session_ttl_seconds=tma_ttl,
+        notifier_poll_seconds=notifier_poll,
     )
 

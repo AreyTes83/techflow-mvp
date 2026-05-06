@@ -33,6 +33,9 @@ async def _send_or_warn(tg: TelegramClient, chat_id: int, text: str) -> None:
             except Exception:
                 detail = (e.response.text or "")[:300]
         logger.warning("Telegram sendMessage не вдався (chat_id=%s): %s", chat_id, detail or e)
+    except RuntimeError as e:
+        # telegram_api.send_message: HTTP 200, але поле ok=false у JSON.
+        logger.warning("Telegram sendMessage не вдався (chat_id=%s): %s", chat_id, e)
 
 
 def now_iso() -> str:
@@ -49,7 +52,7 @@ async def notifier_loop(
     tg: TelegramClient,
     sb: SupabaseAdmin,
     state: NotifierState,
-    poll_seconds: float = 4.0,
+    poll_seconds: float = 15.0,
 ) -> None:
     """
     Minimal polling notifier for MVP.
