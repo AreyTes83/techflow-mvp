@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, supabaseConfigured } from './lib/supabase'
 import type { RoleName } from './lib/types'
 import { initTelegramWebApp } from './lib/telegram'
-import { fetchMyRole } from './lib/profile'
+import { fetchMyDisplayIdentity, fetchMyRole } from './lib/profile'
 import { Login } from './components/Login'
 import { StoreStaffDashboard } from './pages/StoreStaffDashboard'
 import { TechnicianBoard } from './pages/TechnicianBoard'
@@ -52,6 +52,9 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   /** true після cap, поки в фоні ще чекаємо getSession (після «зависання»). */
   const [resumeSessionPending, setResumeSessionPending] = useState(false)
+  /** Щоб при зміні акаунта React не тримав старий стан сторінок (важливо, якщо ті самі storeIds). */
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null)
+  const [identityLine, setIdentityLine] = useState<string | null>(null)
   const bootGenRef = useRef(0)
   const roleHint = useMemo(() => getRoleHint(), [])
 
@@ -85,6 +88,7 @@ export default function App() {
             void supabase.auth.getSession().then(async (later) => {
               if (!later.data.session) return
               if (bootGenRef.current !== myBoot) return
+              setSessionUserId(later.data.session.user.id)
               try {
                 const r = await fetchMyRole()
                 if (bootGenRef.current !== myBoot) return
@@ -96,25 +100,27 @@ export default function App() {
             })
             return
           }
-          if (resumed.data.session) {
-            try {
-              const r = await fetchMyRole()
-              if (!alive || bootGenRef.current !== myBoot) return
-              setRole(r)
-            } catch (e) {
-              if (!alive || bootGenRef.current !== myBoot) return
-              setError(e instanceof Error ? e.message : 'Error')
-            }
+          setSessionUserId(resumed.data.session?.user.id ?? null)
+          if (!resumed.data.session) return
+          try {
+            const r = await fetchMyRole()
+            if (!alive || bootGenRef.current !== myBoot) return
+            setRole(r)
+          } catch (e) {
+            if (!alive || bootGenRef.current !== myBoot) return
+            setError(e instanceof Error ? e.message : 'Error')
           }
           return
         }
 
         const session = raced.r.data.session ?? null
         if (!session) {
+          setSessionUserId(null)
           setGateOpen(true)
           return
         }
 
+        setSessionUserId(session.user.id)
         try {
           const r = await fetchMyRole()
           if (!alive || bootGenRef.current !== myBoot) return
@@ -133,10 +139,12 @@ export default function App() {
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!alive) return
+      setSessionUserId(session?.user.id ?? null)
       if (!session) {
         setRole(null)
         setError(null)
         setResumeSessionPending(false)
+        setIdentityLine(null)
         return
       }
       setError(null)
@@ -155,6 +163,26 @@ export default function App() {
       sub.subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!sessionUserId || !role) {
+      setIdentityLine(null)
+      return
+    }
+    let ok = true
+    fetchMyDisplayIdentity()
+      .then((id) => {
+        if (!ok) return
+        setIdentityLine(id.email ? `${id.full_name} · ${id.email}` : id.full_name)
+      })
+      .catch(() => {
+        if (!ok) return
+        setIdentityLine(null)
+      })
+    return () => {
+      ok = false
+    }
+  }, [sessionUserId, role])
 
   if (!gateOpen) {
     return (
@@ -177,10 +205,17 @@ export default function App() {
           <div>
             <strong>TECHFLOW</strong> <span className="pill">{role}</span>
             {roleHint ? <span className="muted"> (hint: {roleHint})</span> : null}
+            {identityLine ? (
+              <div className="muted" style={{ fontSize: '0.88em', marginTop: 4 }}>
+                {identityLine}
+              </div>
+            ) : null}
           </div>
           <button
             className="ghost"
             onClick={() => {
+              setSessionUserId(null)
+              setIdentityLine(null)
               supabase.auth.signOut().catch(() => {})
             }}
           >
@@ -194,9 +229,9 @@ export default function App() {
         ) : null}
       </div>
 
-      {role === 'store_staff' ? <StoreStaffDashboard /> : null}
-      {role === 'technician' ? <TechnicianBoard /> : null}
-      {role === 'manager' ? <ManagerView /> : null}
+      {role === 'store_staff' ? <StoreStaffDashboard key={sessionUserId ?? role} /> : null}
+      {role === 'technician' ? <TechnicianBoard key={sessionUserId ?? role} /> : null}
+      {role === 'manager' ? <ManagerView key={sessionUserId ?? role} /> : null}
     </div>
   )
 }

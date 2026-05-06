@@ -26,6 +26,9 @@ export function Login({ recoveryInProgress = false, serverErrorBelowForm = null 
     setError(null)
     setLoading(true)
     try {
+      // Інакше в WebView часто лишається попередній JWT — наче знову «перший» працівник.
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+
       const raced = await Promise.race([
         supabase.auth.signInWithPassword({ email: email.trim(), password }),
         sleep(SIGN_IN_DEADLINE_MS).then(() => ({ __timeout: true as const })),

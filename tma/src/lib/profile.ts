@@ -43,6 +43,21 @@ async function fetchMyRoleBody(): Promise<RoleName> {
   return roleName
 }
 
+export async function fetchMyDisplayIdentity(): Promise<{ full_name: string; email: string | null }> {
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser()
+  if (userErr) throw userErr
+  if (!user) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase.from('users').select('full_name').eq('id', user.id).maybeSingle()
+
+  if (error) throw error
+  const full_name = (data?.full_name as string | undefined) ?? '—'
+  return { full_name, email: user.email ?? null }
+}
+
 export async function fetchMyStores(): Promise<Array<{ store_id: string; stores: { id: string; name: string } }>> {
   const {
     data: { user },
