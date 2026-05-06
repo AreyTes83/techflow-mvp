@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { DEV_TEST_ACCOUNTS, isDevQuickLoginEnabled } from '../lib/devTestAccounts'
+import { DEV_TEST_ACCOUNTS, isSeedQuickLoginEnabled } from '../lib/devTestAccounts'
 
 /** У WebView Telegram виклик auth інколи буває надто повільним — не тримаємо кнопку без меж. */
 const SIGN_IN_DEADLINE_MS = 15_000
@@ -17,7 +17,7 @@ type LoginProps = {
 }
 
 export function Login({ recoveryInProgress = false, serverErrorBelowForm = null }: LoginProps) {
-  const quickLogin = isDevQuickLoginEnabled()
+  const quickLogin = isSeedQuickLoginEnabled()
   const [presetKey, setPresetKey] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -63,34 +63,42 @@ export function Login({ recoveryInProgress = false, serverErrorBelowForm = null 
         </p>
         {quickLogin ? (
           <div style={{ marginTop: 12 }}>
-            <label>Швидкий вибір профілю (dev)</label>
-            <select
-              value={presetKey}
-              onChange={(e) => {
-                const k = e.target.value
-                setPresetKey(k)
-                const acc = DEV_TEST_ACCOUNTS.find((a) => a.key === k)
-                if (!acc) {
+            <label>Швидкий вибір профілю (seed)</label>
+            <p className="muted" style={{ marginTop: 4, marginBottom: 8 }}>
+              У міні-апі Telegram зазвичай не працює системний випадаючий список — натисни роль
+              кнопкою; пароль підставляється автоматично.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+              {DEV_TEST_ACCOUNTS.map((a) => (
+                <button
+                  key={a.key}
+                  type="button"
+                  className={presetKey === a.key ? undefined : 'ghost'}
+                  onClick={() => {
+                    setPresetKey(a.key)
+                    setEmail(a.email)
+                    setPassword(a.password)
+                  }}
+                >
+                  {a.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="ghost"
+                style={{ fontSize: '13px' }}
+                onClick={() => {
+                  setPresetKey('')
                   setEmail('')
                   setPassword('')
-                  return
-                }
-                setEmail(acc.email)
-                setPassword(acc.password)
-              }}
-              style={{ width: '100%', marginTop: 4, padding: '10px 8px', fontSize: '1rem' }}
-            >
-              <option value="">— вибір ролі / точки для автозаповнення —</option>
-              {DEV_TEST_ACCOUNTS.map((a) => (
-                <option key={a.key} value={a.key}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
+                }}
+              >
+                Вручну: ввести email і пароль
+              </button>
+            </div>
             {presetKey ? (
-              <p className="muted" style={{ marginTop: 6, marginBottom: 0, fontSize: '0.9em' }}>
-                Пароль з seed уже підставлено — лише «Увійти» нижче. Без пароля в Supabase увійти не
-                можна без окремої магічної авторизації.
+              <p className="muted" style={{ marginTop: 8, marginBottom: 0, fontSize: '0.9em' }}>
+                Натисни «Увійти» нижче — пароль з seed уже в формі.
               </p>
             ) : null}
           </div>

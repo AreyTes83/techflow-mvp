@@ -41,6 +41,10 @@ export const DEV_TEST_ACCOUNTS: readonly DevTestAccount[] = [
   },
 ]
 
-export function isDevQuickLoginEnabled(): boolean {
-  return import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEV_QUICK_LOGIN === 'true'
+/**
+ * Кнопки seed-профілів показуємо за замовчуванням (форма логіну і так у відкритому доступі).
+ * Для публічного продакшену вимкніть: VITE_DISABLE_SEED_QUICK_LOGIN=true
+ */
+export function isSeedQuickLoginEnabled(): boolean {
+  return import.meta.env.VITE_DISABLE_SEED_QUICK_LOGIN !== 'true'
 }
