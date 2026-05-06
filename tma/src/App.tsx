@@ -8,8 +8,17 @@ import { StoreStaffDashboard } from './pages/StoreStaffDashboard'
 import { TechnicianBoard } from './pages/TechnicianBoard'
 import { ManagerView } from './pages/ManagerView'
 
-/** Очікування getSession перед розблокуванням UI (WebView Telegram часто «вісне» після Reload; React Strict Mode дає зайвий mount). */
-const SESSION_BOOT_MS = 12_000
+/**
+ * Після цього часу не тримаємо користувача на повноекранному лоудері — показуємо вхід
+ * або (якщо getSession «прокинувся» у фоні) тихе «Відновлюємо вхід…» без червоних попереджень.
+ */
+const SESSION_REVEAL_CAP_MS = 550
+/** Фонова спроба getSession після cap — не нескінченно тримаємо «Відновлюємо…». */
+const SESSION_RESUME_DEADLINE_MS = 12_000
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 function getRoleHint(): string | null {
   try {
@@ -37,11 +46,12 @@ export default function App() {
     )
   }
 
-  const [sessionReady, setSessionReady] = useState(false)
+  /** false = ще повноекранний сплеш (короткий: або швидке завершення auth, або cap). */
+  const [gateOpen, setGateOpen] = useState(false)
   const [role, setRole] = useState<RoleName | null>(null)
   const [error, setError] = useState<string | null>(null)
-  /** Повідомлення про збій старту сесії; не скидається при INITIAL_SESSION з null (на відміну від `error`). */
-  const [authGateError, setAuthGateError] = useState<string | null>(null)
+  /** true після cap, поки в фоні ще чекаємо getSession (після «зависання»). */
+  const [resumeSessionPending, setResumeSessionPending] = useState(false)
   const bootGenRef = useRef(0)
   const roleHint = useMemo(() => getRoleHint(), [])
 
@@ -54,37 +64,57 @@ export default function App() {
     let alive = true
 
     ;(async () => {
-      let session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'] = null
-      let timedOut = false
-
       try {
         const raced = await Promise.race([
-          supabase.auth.getSession().then((res) => ({ kind: 'session' as const, res })),
-          new Promise<{ kind: 'timeout' }>((resolve) =>
-            setTimeout(() => resolve({ kind: 'timeout' }), SESSION_BOOT_MS),
-          ),
+          supabase.auth.getSession().then((r) => ({ kind: 'session' as const, r })),
+          sleep(SESSION_REVEAL_CAP_MS).then(() => ({ kind: 'cap' as const })),
         ])
-        if (raced.kind === 'timeout') {
-          timedOut = true
-          session = null
-        } else {
-          session = raced.res.data.session ?? null
+
+        if (bootGenRef.current !== myBoot) return
+
+        if (raced.kind === 'cap') {
+          setGateOpen(true)
+          setResumeSessionPending(true)
+          const resumed = await Promise.race([
+            supabase.auth.getSession(),
+            sleep(SESSION_RESUME_DEADLINE_MS).then(() => '__deadline__' as const),
+          ])
+          if (bootGenRef.current !== myBoot) return
+          setResumeSessionPending(false)
+          if (resumed === '__deadline__') {
+            void supabase.auth.getSession().then(async (later) => {
+              if (!later.data.session) return
+              if (bootGenRef.current !== myBoot) return
+              try {
+                const r = await fetchMyRole()
+                if (bootGenRef.current !== myBoot) return
+                setRole(r)
+              } catch (e) {
+                if (bootGenRef.current !== myBoot) return
+                setError(e instanceof Error ? e.message : 'Error')
+              }
+            })
+            return
+          }
+          if (resumed.data.session) {
+            try {
+              const r = await fetchMyRole()
+              if (!alive || bootGenRef.current !== myBoot) return
+              setRole(r)
+            } catch (e) {
+              if (!alive || bootGenRef.current !== myBoot) return
+              setError(e instanceof Error ? e.message : 'Error')
+            }
+          }
+          return
         }
-      } catch {
-        session = null
-      }
 
-      // React Strict Mode: не оновлюємо стан з «старого» циклу mount.
-      if (bootGenRef.current !== myBoot) return
+        const session = raced.r.data.session ?? null
+        if (!session) {
+          setGateOpen(true)
+          return
+        }
 
-      setSessionReady(true)
-      if (timedOut) {
-        setAuthGateError(
-          'Не вдалось швидко отримати сесію (часто після «Перезавантажити» в Telegram). Закрий міні-ап і відкрий знову з бота, або увійди логіном/паролем.',
-        )
-      }
-
-      if (session) {
         try {
           const r = await fetchMyRole()
           if (!alive || bootGenRef.current !== myBoot) return
@@ -93,6 +123,11 @@ export default function App() {
           if (!alive || bootGenRef.current !== myBoot) return
           setError(e instanceof Error ? e.message : 'Error')
         }
+        setGateOpen(true)
+      } catch {
+        if (bootGenRef.current !== myBoot) return
+        setGateOpen(true)
+        setResumeSessionPending(false)
       }
     })()
 
@@ -101,9 +136,9 @@ export default function App() {
       if (!session) {
         setRole(null)
         setError(null)
+        setResumeSessionPending(false)
         return
       }
-      setAuthGateError(null)
       setError(null)
       try {
         const r = await fetchMyRole()
@@ -121,7 +156,7 @@ export default function App() {
     }
   }, [])
 
-  if (!sessionReady) {
+  if (!gateOpen) {
     return (
       <div className="container">
         <div className="card">Завантаження…</div>
@@ -131,16 +166,7 @@ export default function App() {
 
   if (!role) {
     return (
-      <div>
-        {authGateError || error ? (
-          <div className="container">
-            <div className="card" style={{ borderColor: '#fecaca', color: '#b91c1c' }}>
-              {authGateError ?? error}
-            </div>
-          </div>
-        ) : null}
-        <Login />
-      </div>
+      <Login recoveryInProgress={resumeSessionPending} serverErrorBelowForm={error} />
     )
   }
 
@@ -155,7 +181,6 @@ export default function App() {
           <button
             className="ghost"
             onClick={() => {
-              setAuthGateError(null)
               supabase.auth.signOut().catch(() => {})
             }}
           >

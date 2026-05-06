@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-export function Login() {
+type LoginProps = {
+  /** Після перезавантаження в TG getSession інколи приходить із затримкою — не показуємо червоний банер. */
+  recoveryInProgress?: boolean
+  /** Помилка з беку (fetch ролі тощо) — під формою, не блокує повноекранно. */
+  serverErrorBelowForm?: string | null
+}
+
+export function Login({ recoveryInProgress = false, serverErrorBelowForm = null }: LoginProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,6 +35,11 @@ export function Login() {
         <p className="muted" style={{ marginTop: 0 }}>
           MVP режим: увійди тестовим email/password (з seed).
         </p>
+        {recoveryInProgress ? (
+          <p className="muted" style={{ marginTop: 8, marginBottom: 0 }}>
+            Відновлюємо збережений вхід…
+          </p>
+        ) : null}
 
         <form onSubmit={onSubmit}>
           <label>Email</label>
@@ -43,6 +55,11 @@ export function Login() {
           <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
             <button disabled={loading}>{loading ? 'Входимо…' : 'Увійти'}</button>
           </div>
+          {serverErrorBelowForm ? (
+            <p style={{ marginTop: 10, color: '#b91c1c' }}>
+              {serverErrorBelowForm}
+            </p>
+          ) : null}
           {error ? (
             <p style={{ marginTop: 10, color: '#b91c1c' }}>
               {error}
