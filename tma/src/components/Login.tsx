@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+/** У WebView Telegram виклик auth інколи буває надто повільним — не тримаємо кнопку без меж. */
+const SIGN_IN_DEADLINE_MS = 15_000
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 type LoginProps = {
   /** Після перезавантаження в TG getSession інколи приходить із затримкою — не показуємо червоний банер. */
   recoveryInProgress?: boolean
@@ -19,7 +26,20 @@ export function Login({ recoveryInProgress = false, serverErrorBelowForm = null 
     setError(null)
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const raced = await Promise.race([
+        supabase.auth.signInWithPassword({ email: email.trim(), password }),
+        sleep(SIGN_IN_DEADLINE_MS).then(() => ({ __timeout: true as const })),
+      ])
+
+      if (typeof raced === 'object' && raced && '__timeout' in raced) {
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+        setError(
+          `Не вдалось увійти за ${SIGN_IN_DEADLINE_MS / 1000} с (частіше в Telegram). Спробуй іншу мережу або закрий міні-ап і відкрий знову з бота.`,
+        )
+        return
+      }
+
+      const { error } = raced
       if (error) throw error
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login error')

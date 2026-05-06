@@ -1,7 +1,27 @@
 import { supabase } from './supabase'
 import type { RoleName } from './types'
 
+const ROLE_FETCH_DEADLINE_MS = 12_000
+
+function sleep(ms: number): Promise<never> {
+  return new Promise((_, reject) =>
+    setTimeout(
+      () =>
+        reject(
+          new Error(
+            'Таймаут при отриманні ролі. Перевір мережу або відкрий міні-ап з іншої мережі (інколи блокують домен *.supabase.co).',
+          ),
+        ),
+      ms,
+    ),
+  )
+}
+
 export async function fetchMyRole(): Promise<RoleName> {
+  return Promise.race([fetchMyRoleBody(), sleep(ROLE_FETCH_DEADLINE_MS)])
+}
+
+async function fetchMyRoleBody(): Promise<RoleName> {
   const {
     data: { user },
     error: userErr,
