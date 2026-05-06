@@ -61,9 +61,9 @@ class SupabaseAdmin:
             return int(tg_id) if tg_id is not None else None
 
     async def list_technician_telegram_ids(self) -> list[int]:
-        # Find users with technician role
+        # user_roles матим два FK до users → без підказки PostgREST дає «300 Multiple Choices».
         params = {
-            "select": "users(telegram_id),roles(name)",
+            "select": "users!user_roles_user_id_fkey(telegram_id),roles!user_roles_role_id_fkey(name)",
             "limit": "200",
         }
         async with httpx.AsyncClient(timeout=30.0) as client:
