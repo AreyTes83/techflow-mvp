@@ -76,7 +76,13 @@ async def bot_polling_loop(tg: TelegramClient, tma_url: str) -> None:
     offset: int | None = None
     logger.info("Telegram long polling started.")
     while True:
-        updates = await tg.get_updates(offset=offset)
+        try:
+            updates = await tg.get_updates(offset=offset)
+        except Exception:
+            logger.exception("getUpdates failed (перевір токен і webhook; див. README backend)")
+            await asyncio.sleep(3.0)
+            continue
+
         for u in updates:
             offset = u.update_id + 1
             if not u.message:
@@ -91,7 +97,10 @@ async def bot_polling_loop(tg: TelegramClient, tma_url: str) -> None:
             chat_id = int(chat.get("id"))
             user_id = int(from_user.get("id"))
 
-            await handle_command(tg, chat_id=chat_id, user_id=user_id, text=text, tma_url=tma_url)
+            try:
+                await handle_command(tg, chat_id=chat_id, user_id=user_id, text=text, tma_url=tma_url)
+            except Exception:
+                logger.exception("handle_command failed for update_id=%s", u.update_id)
 
         await asyncio.sleep(0.2)
 
@@ -116,6 +125,13 @@ async def async_main() -> None:
 
     logging.basicConfig(level=logging.INFO)
     tg = TelegramClient(settings.telegram_token)
+
+    # Long polling не працює, якщо для бота активний webhook — знімаємо на старті.
+    try:
+        await tg.delete_webhook(drop_pending_updates=False)
+        logger.info("Telegram webhook cleared (OK for getUpdates long polling).")
+    except Exception:
+        logger.exception("deleteWebhook failed — якщо бот мовчить, відкрий вручну deleteWebhook (див. docs)")
 
     tasks: list[asyncio.Task] = []
 

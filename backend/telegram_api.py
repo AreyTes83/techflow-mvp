@@ -20,6 +20,15 @@ class TelegramClient:
     async def close(self) -> None:
         await self._http.aclose()
 
+    async def delete_webhook(self, drop_pending_updates: bool = False) -> None:
+        """Якщо на боті колись увімкнули webhook — getUpdates не працює; вимкнути webhook."""
+        payload: dict[str, Any] = {"drop_pending_updates": drop_pending_updates}
+        r = await self._http.post(self._base + "deleteWebhook", json=payload)
+        r.raise_for_status()
+        data = r.json()
+        if not data.get("ok"):
+            raise RuntimeError(f"Telegram deleteWebhook failed: {data}")
+
     async def get_updates(self, offset: int | None = None) -> list[TgUpdate]:
         payload: dict[str, Any] = {"timeout": 25}
         if offset is not None:
@@ -29,7 +38,15 @@ class TelegramClient:
         r.raise_for_status()
         data = r.json()
         if not data.get("ok"):
-            raise RuntimeError(f"Telegram getUpdates failed: {data}")
+            err = data.get("description") or str(data)
+            code = data.get("error_code")
+            hint = ""
+            if code == 409 or "webhook" in err.lower():
+                hint = (
+                    " (Конфлікт з webhook: процес на старті викликає deleteWebhook; або вручну в браузері відкрий "
+                    "https://api.telegram.org/bot<TOKEN>/deleteWebhook)"
+                )
+            raise RuntimeError(f"Telegram getUpdates failed: {err}{hint}")
         res = []
         for u in data.get("result", []):
             res.append(TgUpdate(update_id=u["update_id"], message=u.get("message")))
