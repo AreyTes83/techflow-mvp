@@ -314,7 +314,7 @@ insert into public.roles (name)
 values ('store_staff'), ('technician'), ('manager')
 on conflict (name) do nothing;
 
--- 2) Store
+-- 2) Stores
 insert into public.stores (id, name, address, lat, lng, working_hours)
 values (
   '11111111-1111-1111-1111-111111111111',
@@ -322,6 +322,17 @@ values (
   'Рј. РљРёС—РІ, С‚РµСЃС‚РѕРІР° Р°РґСЂРµСЃР° 1',
   50.4501,
   30.5234,
+  '09:00-21:00'
+)
+on conflict (id) do nothing;
+
+insert into public.stores (id, name, address, lat, lng, working_hours)
+values (
+  '22222222-2222-2222-2222-222222222222',
+  'Магазин #2',
+  'м. Київ, тестова адреса 2',
+  50.452,
+  30.526,
   '09:00-21:00'
 )
 on conflict (id) do nothing;
@@ -456,11 +467,11 @@ insert into public.user_roles (user_id, role_id, assigned_by)
 select 'dddddddd-dddd-dddd-dddd-dddddddddddd', r.id, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' from role_ids r where r.name = 'store_staff'
 on conflict do nothing;
 
--- 6) Link store staff to store
+-- 6) Link store staff to stores (store2@ — лише Магазин #2)
 insert into public.user_stores (user_id, store_id)
 values
   ('cccccccc-cccc-cccc-cccc-cccccccccccc', '11111111-1111-1111-1111-111111111111'),
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '11111111-1111-1111-1111-111111111111')
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '22222222-2222-2222-2222-222222222222')
 on conflict do nothing;
 
 -- Seed credentials (for local MVP):
@@ -601,3 +612,22 @@ create trigger tickets_write_audit
 after insert or update on public.tickets
 for each row
 execute function public.log_ticket_history_audit();
+
+-- 006: Магазин #2; store2@ лише на ньому (окремий список заявок у TMA)
+insert into public.stores (id, name, address, lat, lng, working_hours)
+values (
+  '22222222-2222-2222-2222-222222222222',
+  'Магазин #2',
+  'м. Київ, тестова адреса 2',
+  50.452,
+  30.526,
+  '09:00-21:00'
+)
+on conflict (id) do nothing;
+
+delete from public.user_stores
+where user_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+
+insert into public.user_stores (user_id, store_id)
+values ('dddddddd-dddd-dddd-dddd-dddddddddddd', '22222222-2222-2222-2222-222222222222')
+on conflict (user_id, store_id) do nothing;

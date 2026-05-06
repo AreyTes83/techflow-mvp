@@ -9,7 +9,7 @@ insert into public.roles (name)
 values ('store_staff'), ('technician'), ('manager')
 on conflict (name) do nothing;
 
--- 2) Store
+-- 2) Stores
 insert into public.stores (id, name, address, lat, lng, working_hours)
 values (
   '11111111-1111-1111-1111-111111111111',
@@ -17,6 +17,17 @@ values (
   'м. Київ, тестова адреса 1',
   50.4501,
   30.5234,
+  '09:00-21:00'
+)
+on conflict (id) do nothing;
+
+insert into public.stores (id, name, address, lat, lng, working_hours)
+values (
+  '22222222-2222-2222-2222-222222222222',
+  'Магазин #2',
+  'м. Київ, тестова адреса 2',
+  50.452,
+  30.526,
   '09:00-21:00'
 )
 on conflict (id) do nothing;
@@ -91,7 +102,7 @@ values (
 )
 on conflict (id) do nothing;
 
--- (Optional) second store staff for testing multi-user later
+-- Second store_staff (обліковка store2@) — лише для Магазину #2; store@ — лише Магазин #1
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change_token_new, email_change_token_current, email_change, created_at, updated_at)
 values (
   'dddddddd-dddd-dddd-dddd-dddddddddddd',
@@ -151,11 +162,11 @@ insert into public.user_roles (user_id, role_id, assigned_by)
 select 'dddddddd-dddd-dddd-dddd-dddddddddddd', r.id, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' from role_ids r where r.name = 'store_staff'
 on conflict do nothing;
 
--- 6) Link store staff to store
+-- 6) Link store staff to stores (різні магазини — різний список заявок у TMA)
 insert into public.user_stores (user_id, store_id)
 values
   ('cccccccc-cccc-cccc-cccc-cccccccccccc', '11111111-1111-1111-1111-111111111111'),
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '11111111-1111-1111-1111-111111111111')
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '22222222-2222-2222-2222-222222222222')
 on conflict do nothing;
 
 -- Seed credentials (for local MVP):
