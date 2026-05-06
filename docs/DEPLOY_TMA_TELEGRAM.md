@@ -15,6 +15,7 @@ Telegram відкриває Mini App **лише за HTTPS**. Локальний
 |--------|----------|
 | `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` (без `/rest/v1/`) |
 | `VITE_SUPABASE_ANON_KEY` | anon public key з Supabase |
+| `VITE_BOT_API_URL` | (за потреби) публічний HTTPS базовий URL HTTP API бота, див. **розділ 7** |
 
 Після кожної зміни змінних — **перезібрати** проєкт (redeploy).
 
@@ -73,9 +74,32 @@ TMA_URL=https://techflow-xxx.vercel.app/
 ## 6. Перевірка з телефона
 
 1. Відкрий бота в Telegram на телефоні → **/start** → **Відкрити TECHFLOW (TMA)** (або аналогічна кнопка).
-2. Має відкритись твій HTTPS URL, логін seed-користувачем, сценарій: магазин → технік → підтвердження → оцінка.
+2. Має відкритись твій HTTPS URL. Якщо налаштовано **розділ 7** нижче, вхід у Telegram без пароля; інакше — seed email/password. Сценарій: магазин → технік → підтвердження → оцінка.
 
-## 7. Часті проблеми
+## 7. Безпека TMA: вхід через Telegram (initData)
+
+Міні-ап не повинен покладатися лише на пароль. Потік:
+
+1. Поруч із long-poll ботом стартує HTTP API (`POST /tma/session`, порт `BOT_HTTP_PORT`, типово `8787`).
+2. TMA відправляє сирий рядок `Telegram.WebApp.initData` на публічний **HTTPS** URL бота (`VITE_BOT_API_URL`).
+3. Сервер перевіряє HMAC (токен бота), шукає рядок у `public.users` за `telegram_id`, читає email у `auth.users`, підписує Supabase **access JWT** через **`SUPABASE_JWT_SECRET`** (Supabase → Settings → API → **JWT Secret**).
+4. Клієнт викликає `supabase.auth.setSession` і далі всі запити йдуть з тим самим RLS, що й після звичайного логіну.
+
+### Змінні
+
+**Бот (`backend/.env`):** `SUPABASE_JWT_SECRET`, за потреби `BOT_HTTP_HOST`, `BOT_HTTP_PORT`, `TMA_CORS_ORIGINS`, `TMA_SESSION_TTL_SECONDS` (див. `backend/.env.example`).
+
+**TMA:** `VITE_BOT_API_URL` — базовий URL API **без** слеша в кінці (той самий хост, що проксірує на порт бота). Якщо змінна порожня — у браузері лишається форма пароля.
+
+### Прив’язка користувача
+
+У `public.users.telegram_id` має бути **реальний** Telegram id (його показує `/whoami` у боті). У seed стоять тестові числа — для бойового тесту онови рядок у таблиці.
+
+### Інфраструктура
+
+Потрібен публічний HTTPS до процесу `python main.py` (VPS + nginx, Railway, Cloudflare Tunnel, ngrok тощо). CORS за замовчуванням дозволяє origin з `TMA_URL` і `http://localhost:5173`.
+
+## 8. Часті проблеми
 
 | Симптом | Що зробити |
 |---------|------------|

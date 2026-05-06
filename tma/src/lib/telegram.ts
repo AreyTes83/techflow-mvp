@@ -3,6 +3,8 @@ type TelegramWebApp = {
   expand?: () => void
   setHeaderColor?: (color: string) => void
   setBackgroundColor?: (color: string) => void
+  /** Raw query-string для перевірки HMAC на бекенді. */
+  initData?: string
   initDataUnsafe?: unknown
 }
 

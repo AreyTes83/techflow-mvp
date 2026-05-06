@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, supabaseConfigured } from './lib/supabase'
 import type { RoleName } from './lib/types'
+import { exchangeInitDataForAccessToken, getBotApiBaseUrl, getTelegramInitData } from './lib/botSession'
 import { initTelegramWebApp } from './lib/telegram'
 import { fetchMyDisplayIdentity, fetchMyRole } from './lib/profile'
 import { Login } from './components/Login'
@@ -68,6 +69,36 @@ export default function App() {
 
     ;(async () => {
       try {
+        const botBase = getBotApiBaseUrl()
+        const tgInit = getTelegramInitData()
+
+        if (botBase && tgInit) {
+          try {
+            await supabase.auth.signOut({ scope: 'local' })
+            const access_token = await exchangeInitDataForAccessToken(botBase, tgInit)
+            const { data: sessWrap, error: sessErr } = await supabase.auth.setSession({
+              access_token,
+              refresh_token: access_token,
+            })
+            if (sessErr) throw sessErr
+            if (!sessWrap.session) throw new Error('Порожня сесія після Telegram-входу')
+
+            const r = await fetchMyRole()
+            if (bootGenRef.current !== myBoot) return
+            setSessionUserId(sessWrap.session.user.id)
+            setRole(r)
+            setGateOpen(true)
+            return
+          } catch (tgErr) {
+            if (bootGenRef.current !== myBoot) return
+            setError(
+              tgErr instanceof Error
+                ? `Telegram: ${tgErr.message}. Для тесту в браузері увійди паролем.`
+                : 'Telegram вхід не вдався. Спробуй пароль.',
+            )
+          }
+        }
+
         const raced = await Promise.race([
           supabase.auth.getSession().then((r) => ({ kind: 'session' as const, r })),
           sleep(SESSION_REVEAL_CAP_MS).then(() => ({ kind: 'cap' as const })),
