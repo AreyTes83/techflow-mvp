@@ -1,27 +1,58 @@
 import { supabase } from './supabase'
 import type { RoleName } from './types'
 
-const ROLE_FETCH_DEADLINE_MS = 12_000
+/** Cold start Telegram WebView + мобільна мережа часто >12 с до першої відповіді з *.supabase.co */
+const ROLE_FETCH_DEADLINE_MS = 28_000
+const ROLE_FETCH_MAX_ATTEMPTS = 3
+const ROLE_FETCH_BACKOFF_MS = [0, 450, 1200]
 
-function sleep(ms: number): Promise<never> {
-  return new Promise((_, reject) =>
-    setTimeout(
-      () =>
-        reject(
-          new Error(
-            'Таймаут при отриманні ролі. Перевір мережу або відкрий міні-ап з іншої мережі (інколи блокують домен *.supabase.co).',
-          ),
-        ),
-      ms,
-    ),
-  )
+const ROLE_TIMEOUT_UA =
+  'Таймаут при отриманні ролі. Перевір мережу або відкрий міні-ап з іншої мережі (інколи блокують домен *.supabase.co).'
+
+/** Два одночасні виклики fetchMyRole (boot + onAuthStateChange) не мають дублювати запити. */
+const pendingRoleByUserId = new Map<string, Promise<RoleName>>()
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let id: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    id = setTimeout(() => reject(new Error(message)), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => {
+    if (id !== undefined) clearTimeout(id)
+  }) as Promise<T>
+}
+
+async function fetchMyRoleOnce(userId: string): Promise<RoleName> {
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('roles(name)')
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw error
+  const roleName = (data as any)?.roles?.name as RoleName | undefined
+  if (!roleName) throw new Error('Role is not assigned (seed missing?)')
+  return roleName
+}
+
+async function fetchMyRoleWithRetries(userId: string): Promise<RoleName> {
+  let lastErr: unknown
+  for (let i = 0; i < ROLE_FETCH_MAX_ATTEMPTS; i++) {
+    const delay = ROLE_FETCH_BACKOFF_MS[i] ?? 1200
+    if (delay > 0) {
+      await new Promise((r) => setTimeout(r, delay))
+    }
+    try {
+      return await withTimeout(fetchMyRoleOnce(userId), ROLE_FETCH_DEADLINE_MS, ROLE_TIMEOUT_UA)
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr))
 }
 
 export async function fetchMyRole(): Promise<RoleName> {
-  return Promise.race([fetchMyRoleBody(), sleep(ROLE_FETCH_DEADLINE_MS)])
-}
-
-async function fetchMyRoleBody(): Promise<RoleName> {
   const {
     data: { user },
     error: userErr,
@@ -30,17 +61,15 @@ async function fetchMyRoleBody(): Promise<RoleName> {
   if (userErr) throw userErr
   if (!user) throw new Error('Not authenticated')
 
-  const { data, error } = await supabase
-    .from('user_roles')
-    .select('roles(name)')
-    .eq('user_id', user.id)
-    .limit(1)
-    .maybeSingle()
-
-  if (error) throw error
-  const roleName = (data as any)?.roles?.name as RoleName | undefined
-  if (!roleName) throw new Error('Role is not assigned (seed missing?)')
-  return roleName
+  const uid = user.id
+  let chained = pendingRoleByUserId.get(uid)
+  if (!chained) {
+    chained = fetchMyRoleWithRetries(uid).finally(() => {
+      pendingRoleByUserId.delete(uid)
+    })
+    pendingRoleByUserId.set(uid, chained)
+  }
+  return chained
 }
 
 export async function fetchMyDisplayIdentity(): Promise<{ full_name: string; email: string | null }> {
@@ -70,4 +99,3 @@ export async function fetchMyStores(): Promise<Array<{ store_id: string; stores:
   if (error) throw error
   return (data ?? []) as any
 }
-

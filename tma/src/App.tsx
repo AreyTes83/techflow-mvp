@@ -57,6 +57,8 @@ export default function App() {
   const [sessionUserId, setSessionUserId] = useState<string | null>(null)
   const [identityLine, setIdentityLine] = useState<string | null>(null)
   const bootGenRef = useRef(0)
+  /** Якщо роль уже успішно отримано для цього user — не показуємо помилку від повторного onAuthStateChange (типово у Telegram WebView). */
+  const roleFetchOkUserIdRef = useRef<string | null>(null)
   const roleHint = useMemo(() => getRoleHint(), [])
 
   useEffect(() => {
@@ -87,6 +89,7 @@ export default function App() {
             if (bootGenRef.current !== myBoot) return
             setSessionUserId(sessWrap.session.user.id)
             setRole(r)
+            roleFetchOkUserIdRef.current = sessWrap.session.user.id
             setGateOpen(true)
             return
           } catch (tgErr) {
@@ -124,6 +127,7 @@ export default function App() {
                 const r = await fetchMyRole()
                 if (bootGenRef.current !== myBoot) return
                 setRole(r)
+                roleFetchOkUserIdRef.current = later.data.session.user.id
               } catch (e) {
                 if (bootGenRef.current !== myBoot) return
                 setError(e instanceof Error ? e.message : 'Error')
@@ -137,6 +141,7 @@ export default function App() {
             const r = await fetchMyRole()
             if (!alive || bootGenRef.current !== myBoot) return
             setRole(r)
+            roleFetchOkUserIdRef.current = resumed.data.session.user.id
           } catch (e) {
             if (!alive || bootGenRef.current !== myBoot) return
             setError(e instanceof Error ? e.message : 'Error')
@@ -156,6 +161,7 @@ export default function App() {
           const r = await fetchMyRole()
           if (!alive || bootGenRef.current !== myBoot) return
           setRole(r)
+          roleFetchOkUserIdRef.current = session.user.id
         } catch (e) {
           if (!alive || bootGenRef.current !== myBoot) return
           setError(e instanceof Error ? e.message : 'Error')
@@ -172,10 +178,15 @@ export default function App() {
       if (!alive) return
       setSessionUserId(session?.user.id ?? null)
       if (!session) {
+        roleFetchOkUserIdRef.current = null
         setRole(null)
         setError(null)
         setResumeSessionPending(false)
         setIdentityLine(null)
+        return
+      }
+      /** Дублікат INITIAL_SESSION у WebView часто смикає зайвий fetch після успішного boot. */
+      if (roleFetchOkUserIdRef.current === session.user.id) {
         return
       }
       setError(null)
@@ -183,8 +194,11 @@ export default function App() {
         const r = await fetchMyRole()
         if (!alive || bootGenRef.current !== myBoot) return
         setRole(r)
+        roleFetchOkUserIdRef.current = session.user.id
       } catch (e) {
         if (!alive || bootGenRef.current !== myBoot) return
+        /** Не затуляємо екран помилкою, якщо роль уже була отримана тим же користувачем. */
+        if (roleFetchOkUserIdRef.current === session.user.id) return
         setError(e instanceof Error ? e.message : 'Error')
       }
     })
@@ -257,6 +271,7 @@ export default function App() {
               className="ghost"
               type="button"
               onClick={() => {
+                roleFetchOkUserIdRef.current = null
                 setSessionUserId(null)
                 setIdentityLine(null)
                 supabase.auth.signOut().catch(() => {})
