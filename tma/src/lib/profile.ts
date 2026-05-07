@@ -9,6 +9,11 @@ const ROLE_FETCH_BACKOFF_MS = [0, 450, 1200]
 const ROLE_TIMEOUT_UA =
   'Таймаут при отриманні ролі. Перевір мережу або відкрий міні-ап з іншої мережі (інколи блокують домен *.supabase.co).'
 
+/** getUser інколи «висить» у WebView — без цього вхід виглядає як зависання. */
+const AUTH_GET_USER_DEADLINE_MS = 18_000
+const AUTH_GET_USER_TIMEOUT_UA =
+  'Не вдалося перевірити сесію за відведений час. Закрий міні-ап і відкрий знову або перевір зв’язок до Supabase.'
+
 /** Два одночасні виклики fetchMyRole (boot + onAuthStateChange) не мають дублювати запити. */
 const pendingRoleByUserId = new Map<string, Promise<RoleName>>()
 
@@ -56,7 +61,7 @@ export async function fetchMyRole(): Promise<RoleName> {
   const {
     data: { user },
     error: userErr,
-  } = await supabase.auth.getUser()
+  } = await withTimeout(supabase.auth.getUser(), AUTH_GET_USER_DEADLINE_MS, AUTH_GET_USER_TIMEOUT_UA)
 
   if (userErr) throw userErr
   if (!user) throw new Error('Not authenticated')

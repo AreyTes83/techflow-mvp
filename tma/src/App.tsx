@@ -85,6 +85,7 @@ export default function App() {
             if (sessErr) throw sessErr
             if (!sessWrap.session) throw new Error('Порожня сесія після Telegram-входу')
 
+            setError(null)
             const r = await fetchMyRole()
             if (bootGenRef.current !== myBoot) return
             setSessionUserId(sessWrap.session.user.id)
@@ -124,6 +125,7 @@ export default function App() {
               if (bootGenRef.current !== myBoot) return
               setSessionUserId(later.data.session.user.id)
               try {
+                setError(null)
                 const r = await fetchMyRole()
                 if (bootGenRef.current !== myBoot) return
                 setRole(r)
@@ -138,6 +140,7 @@ export default function App() {
           setSessionUserId(resumed.data.session?.user.id ?? null)
           if (!resumed.data.session) return
           try {
+            setError(null)
             const r = await fetchMyRole()
             if (!alive || bootGenRef.current !== myBoot) return
             setRole(r)
@@ -158,6 +161,7 @@ export default function App() {
 
         setSessionUserId(session.user.id)
         try {
+          setError(null)
           const r = await fetchMyRole()
           if (!alive || bootGenRef.current !== myBoot) return
           setRole(r)
@@ -187,6 +191,7 @@ export default function App() {
       }
       /** Дублікат INITIAL_SESSION у WebView часто смикає зайвий fetch після успішного boot. */
       if (roleFetchOkUserIdRef.current === session.user.id) {
+        setError(null)
         return
       }
       setError(null)
