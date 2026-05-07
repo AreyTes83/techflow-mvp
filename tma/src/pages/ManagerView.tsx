@@ -45,22 +45,23 @@ export function ManagerView() {
   return (
     <div className="container">
       <div className="card">
-        <h2 style={{ marginTop: 0 }}>Керівник — моніторинг</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Огляд усієї поточної черги та ключових переходів статусів.
-        </p>
-        <div className="toolbar">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 12,
+            flexWrap: 'wrap',
+            marginBottom: 8,
+          }}
+        >
+          <h2 style={{ margin: 0 }}>Усі заявки</h2>
           <button className="ghost" type="button" onClick={() => refresh().catch(() => {})}>
             Оновити
           </button>
         </div>
-        {error ? <p style={{ color: '#fecaca', marginTop: 12 }}>{error}</p> : null}
-      </div>
+        {error ? <p style={{ color: '#fecaca', marginTop: 8 }}>{error}</p> : null}
 
-      <div style={{ height: 14 }} />
-
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Усі заявки</h3>
         {tickets.length === 0 ? <p className="muted">Немає заявок.</p> : null}
 
         {ticketGroups.map(({ status: groupStatus, items, count }) => (
