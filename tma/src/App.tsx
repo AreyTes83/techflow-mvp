@@ -35,7 +35,7 @@ export default function App() {
     return (
       <div className="container">
         <div className="card">
-          <h2 style={{ marginTop: 0 }}>TECHFLOW</h2>
+          <h2>TECHFLOW</h2>
           <p className="muted" style={{ marginTop: 0 }}>
             Немає налаштувань Supabase.
           </p>
@@ -218,7 +218,7 @@ export default function App() {
   if (!gateOpen) {
     return (
       <div className="container">
-        <div className="card">Завантаження…</div>
+        <div className="card card--compact">Завантаження…</div>
       </div>
     )
   }
@@ -232,29 +232,42 @@ export default function App() {
   return (
     <div>
       <div className="container" style={{ paddingBottom: 0 }}>
-        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <strong>TECHFLOW</strong> <span className="pill">{role}</span>
-            {roleHint ? <span className="muted"> (hint: {roleHint})</span> : null}
+        <div
+          className="card card--compact"
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div className="brand-chip">
+              <strong>TECHFLOW</strong>
+              <span className="pill pill--role">{role}</span>
+            </div>
+            {roleHint ? (
+              <span className="muted pill--hint" style={{ fontSize: '12px' }}>
+                hint: {roleHint}
+              </span>
+            ) : null}
             {identityLine ? (
-              <div className="muted" style={{ fontSize: '0.88em', marginTop: 4 }}>
+              <div className="muted" style={{ marginTop: 8, lineHeight: 1.4 }}>
                 {identityLine}
               </div>
             ) : null}
           </div>
-          <button
-            className="ghost"
-            onClick={() => {
-              setSessionUserId(null)
-              setIdentityLine(null)
-              supabase.auth.signOut().catch(() => {})
-            }}
-          >
-            Вийти
-          </button>
+          <div className="topbar-actions">
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => {
+                setSessionUserId(null)
+                setIdentityLine(null)
+                supabase.auth.signOut().catch(() => {})
+              }}
+            >
+              Вийти
+            </button>
+          </div>
         </div>
         {error ? (
-          <div className="card" style={{ marginTop: 10, borderColor: '#fecaca', color: '#b91c1c' }}>
+          <div className="card card--danger" style={{ marginTop: 12, color: '#fecaca', fontSize: '0.95rem' }}>
             {error}
           </div>
         ) : null}

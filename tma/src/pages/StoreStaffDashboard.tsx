@@ -36,7 +36,7 @@ function PendingCloseForm({
   }
 
   return (
-    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+    <div className="divider-top">
       <div className="muted" style={{ marginBottom: 4 }}>
         Технік повідомив про виконання. Підтверди роботу та оціни сервіс.
       </div>
@@ -44,7 +44,7 @@ function PendingCloseForm({
       <StarRatingPicker value={stars} onChange={setStars} disabled={busy} />
       <label style={{ display: 'block', marginTop: 10, fontSize: '0.92em' }}>Коментар (необов’язково)</label>
       <textarea value={review} onChange={(e) => setReview(e.target.value)} disabled={busy} placeholder="Як минуло майстерність / швидкість?" rows={2} />
-      {localErr ? <p style={{ color: '#b91c1c', marginTop: 8 }}>{localErr}</p> : null}
+      {localErr ? <p style={{ color: '#fecaca', marginTop: 8 }}>{localErr}</p> : null}
       <div style={{ marginTop: 10 }}>
         <button type="button" disabled={busy} onClick={submit}>
           {busy ? 'Збереження…' : 'Підтвердити виконання й відправити оцінку'}
@@ -84,13 +84,13 @@ function CompletedRatingForm({
   }
 
   return (
-    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+    <div className="divider-top">
       <div className="muted">Залиш оцінку за виконання.</div>
       <label style={{ fontSize: '0.92em', display: 'block', marginTop: 8 }}>Оцінка</label>
       <StarRatingPicker value={stars} onChange={setStars} disabled={busy} />
       <label style={{ display: 'block', marginTop: 10, fontSize: '0.92em' }}>Коментар</label>
       <textarea value={review} onChange={(e) => setReview(e.target.value)} disabled={busy} placeholder="Коротко про роботу" rows={2} />
-      {localErr ? <p style={{ color: '#b91c1c', marginTop: 8 }}>{localErr}</p> : null}
+      {localErr ? <p style={{ color: '#fecaca', marginTop: 8 }}>{localErr}</p> : null}
       <div style={{ marginTop: 10 }}>
         <button type="button" disabled={busy} onClick={submit}>
           {busy ? 'Збереження…' : 'Відправити оцінку'}
@@ -150,27 +150,30 @@ export function StoreStaffDashboard() {
   function renderTicketCard(t: TicketWithContext) {
     const hint = ticketStatusHint(t.status)
     return (
-      <div key={t.id} className="ticket" style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+      <div key={t.id} className="ticket-card">
+        <div className="ticket-card-meta">
           <div>
-            <span className="pill">{ticketStatusLabel(t.status)}</span>{' '}
-            <span className="muted">{new Date(t.created_at).toLocaleString()}</span>
+            <span className="pill pill--status" data-status={t.status}>
+              {ticketStatusLabel(t.status)}
+            </span>{' '}
+            <span className="muted ticket-summary">{new Date(t.created_at).toLocaleString()}</span>
           </div>
-          <div className="muted" style={{ wordBreak: 'break-all' }}>
-            {t.id.slice(0, 8)}
+          <span className="mono-id">{t.id.slice(0, 8)}</span>
+        </div>
+        <div className="ticket-card-title">{t.description}</div>
+        <div className="ticket-meta-box muted">
+          <div>
+            <span className="meta-label">Точка</span> {t.store?.name ?? '—'}
+          </div>
+          <div>
+            <span className="meta-label">Технік</span>{' '}
+            {t.assignee?.full_name ? (
+              <>{t.assignee.full_name}</>
+            ) : (
+              <>поки не призначений</>
+            )}
           </div>
         </div>
-        <p style={{ marginBottom: hint ? 4 : 6 }}>{t.description}</p>
-        <p className="muted" style={{ fontSize: '0.88em', marginTop: hint ? 0 : 4, marginBottom: 0 }}>
-          <strong>Точка:</strong> {t.store?.name ?? '—'}{' '}
-          {t.assignee?.full_name ? (
-            <>
-              • <strong>Технік:</strong> {t.assignee.full_name}
-            </>
-          ) : (
-            <>• технік поки не призначений</>
-          )}
-        </p>
         {hint ? <p className="muted" style={{ fontSize: '0.9em', marginTop: 6 }}>{hint}</p> : null}
 
         {t.status === 'pending_confirmation' ? (
@@ -238,14 +241,14 @@ export function StoreStaffDashboard() {
   if (loading) {
     return (
       <div className="container">
-        <div className="card">Завантаження…</div>
+        <div className="card card--compact">Завантаження…</div>
       </div>
     )
   }
 
   return (
     <div className="container">
-      <div className="card" style={{ textAlign: 'left' }}>
+      <div className="card">
         <h2 style={{ marginTop: 0 }}>Магазин — SOS</h2>
         <div className="row">
           <div>
@@ -263,20 +266,20 @@ export function StoreStaffDashboard() {
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Коротко: що зламалось?" />
           </div>
         </div>
-        <div style={{ marginTop: 10, display: 'flex', gap: 10 }}>
-          <button onClick={onCreate} disabled={!selectedStoreId || !description.trim()}>
+        <div className="toolbar">
+          <button type="button" onClick={onCreate} disabled={!selectedStoreId || !description.trim()}>
             Створити заявку
           </button>
-          <button className="ghost" onClick={() => refresh().catch(() => {})} disabled={!storeIds.length}>
+          <button type="button" className="ghost" onClick={() => refresh().catch(() => {})} disabled={!storeIds.length}>
             Оновити
           </button>
         </div>
-        {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}
+        {error ? <p style={{ color: '#fecaca', marginTop: 12 }}>{error}</p> : null}
       </div>
 
-      <div style={{ height: 12 }} />
+      <div style={{ height: 14 }} />
 
-      <div className="card" style={{ textAlign: 'left' }}>
+      <div className="card">
         <h3 style={{ marginTop: 0 }}>Поточні заявки</h3>
         <p className="muted" style={{ marginTop: 0 }}>
           Тут лише те, що ще потребує дій магазину або техніка. Після підтвердження й оцінки заявка переходить у блок нижче.

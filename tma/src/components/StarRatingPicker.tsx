@@ -27,9 +27,10 @@ export function StarRatingPicker({ value, onChange, disabled }: Props) {
             style={
               active
                 ? {
-                    color: '#b45309',
-                    borderColor: 'rgba(180,83,9,0.45)',
-                    background: 'rgba(251,191,36,0.15)',
+                    color: '#fde68a',
+                    borderColor: 'rgba(251, 191, 36, 0.55)',
+                    background: 'linear-gradient(145deg, rgba(251,191,36,0.22), rgba(245,158,11,0.12))',
+                    boxShadow: '0 10px 30px -20px rgba(251,191,36,0.65)',
                   }
                 : undefined
             }

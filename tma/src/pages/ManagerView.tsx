@@ -33,7 +33,7 @@ export function ManagerView() {
   if (loading) {
     return (
       <div className="container">
-        <div className="card">Завантаження…</div>
+        <div className="card card--compact">Завантаження…</div>
       </div>
     )
   }
@@ -42,58 +42,62 @@ export function ManagerView() {
     <div className="container">
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Керівник — моніторинг</h2>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="ghost" onClick={() => refresh().catch(() => {})}>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Огляд усієї поточної черги та ключових переходів статусів.
+        </p>
+        <div className="toolbar">
+          <button className="ghost" type="button" onClick={() => refresh().catch(() => {})}>
             Оновити
           </button>
         </div>
-        {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}
+        {error ? <p style={{ color: '#fecaca', marginTop: 12 }}>{error}</p> : null}
       </div>
 
-      <div style={{ height: 12 }} />
+      <div style={{ height: 14 }} />
 
-      <div className="card" style={{ textAlign: 'left' }}>
+      <div className="card">
         <h3 style={{ marginTop: 0 }}>Усі тікети</h3>
         {tickets.length === 0 ? <p className="muted">Нема тікетів.</p> : null}
 
         {tickets.map((t) => {
           const hist = historyByTicket[t.id] ?? []
           return (
-            <div key={t.id} className="ticket">
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+            <div key={t.id} className="ticket-card">
+              <div className="ticket-card-meta">
                 <div>
-                  <span className="pill">{t.status}</span>{' '}
-                  <span className="muted">{new Date(t.created_at).toLocaleString()}</span>
+                  <span className="pill pill--status" data-status={t.status}>
+                    {t.status}
+                  </span>{' '}
+                  <span className="muted ticket-summary">{new Date(t.created_at).toLocaleString()}</span>
                 </div>
-                <div className="muted" style={{ wordBreak: 'break-all' }}>
-                  {t.id.slice(0, 8)}
-                </div>
+                <span className="mono-id">{t.id.slice(0, 8)}</span>
               </div>
-              <p style={{ marginBottom: 6 }}>{t.description}</p>
-              <div className="muted" style={{ fontSize: '0.88em', lineHeight: 1.45 }}>
+              <div className="ticket-card-title">{t.description}</div>
+              <div className="ticket-meta-box muted">
                 <div>
-                  <strong>Магазин:</strong> {t.store?.name ?? '—'}
+                  <span className="meta-label">Магазин</span> {t.store?.name ?? '—'}
                 </div>
                 <div>
-                  <strong>Технік:</strong>{' '}
+                  <span className="meta-label">Технік</span>{' '}
                   {t.assignee?.full_name ?? (t.tech_id ? '—' : 'не призначений')}
                 </div>
                 <div>
-                  <strong>Хто створив заявку:</strong> {t.creator?.full_name ?? '—'}
+                  <span className="meta-label">Створено</span> {t.creator?.full_name ?? '—'}
                 </div>
                 {t.status === 'rated' && t.rating_stars !== null ? (
                   <div>
-                    <strong>Оцінка магазину:</strong> {t.rating_stars}/5
+                    <span className="meta-label">Оцінка</span> {t.rating_stars}/5
                     {t.review_text ? <> — «{t.review_text}»</> : null}
                   </div>
                 ) : null}
               </div>
               {hist.length > 0 ? (
-                <details style={{ marginTop: 10 }}>
-                  <summary className="muted" style={{ cursor: 'pointer', userSelect: 'none' }}>
+                <div className="ticket-history">
+                  <details className="inset-panel" style={{ marginTop: 10 }}>
+                  <summary className="muted" style={{ userSelect: 'none' }}>
                     Історія статусів ({hist.length})
                   </summary>
-                  <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: '0.85em', lineHeight: 1.5 }}>
+                  <ul style={{ margin: '12px 0 0', paddingLeft: 18, fontSize: '0.9em', lineHeight: 1.55 }}>
                     {hist.map((h) => (
                       <li key={h.id}>
                         <span className="muted">{new Date(h.changed_at).toLocaleString()}</span>
@@ -106,6 +110,7 @@ export function ManagerView() {
                     ))}
                   </ul>
                 </details>
+                </div>
               ) : null}
             </div>
           )

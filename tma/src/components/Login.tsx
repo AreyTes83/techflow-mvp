@@ -78,12 +78,12 @@ export function Login({ recoveryInProgress = false, serverErrorBelowForm = null 
             <button disabled={loading}>{loading ? 'Входимо…' : 'Увійти'}</button>
           </div>
           {serverErrorBelowForm ? (
-            <p style={{ marginTop: 10, color: '#b91c1c' }}>
+            <p style={{ marginTop: 10, color: '#fecaca' }}>
               {serverErrorBelowForm}
             </p>
           ) : null}
           {error ? (
-            <p style={{ marginTop: 10, color: '#b91c1c' }}>
+            <p style={{ marginTop: 10, color: '#fecaca' }}>
               {error}
             </p>
           ) : null}

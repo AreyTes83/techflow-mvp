@@ -9,20 +9,11 @@ function TechnicianStoreRating({ ticket }: { ticket: TicketWithContext }) {
     return <p className="muted">Магазин завершив оцінювання.</p>
 
   return (
-    <div
-      style={{
-        marginTop: 10,
-        padding: 10,
-        borderRadius: 8,
-        background: 'var(--code-bg)',
-        textAlign: 'left',
-        border: '1px solid var(--border)',
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: 6 }}>Як магазин оцінив роботу</div>
+    <div className="inset-panel" style={{ marginTop: 10, textAlign: 'left' }}>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>Як магазин оцінив роботу</div>
       <div style={{ letterSpacing: 3 }} aria-label={`Оцінка ${stars} з 5`}>
         {[1, 2, 3, 4, 5].map((n) => (
-          <span key={n} style={{ color: n <= stars ? '#ca8a04' : 'var(--border)' }}>
+          <span key={n} style={{ color: n <= stars ? '#fbbf24' : 'rgba(244,247,255,0.15)' }}>
             ★
           </span>
         ))}
@@ -81,7 +72,7 @@ export function TechnicianBoard() {
   if (loading) {
     return (
       <div className="container">
-        <div className="card">Завантаження…</div>
+        <div className="card card--compact">Завантаження…</div>
       </div>
     )
   }
@@ -91,53 +82,64 @@ export function TechnicianBoard() {
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Технік — задачі</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          MVP: ти бачиш свої задачі + “нові” без виконавця (можна взяти в роботу).
+          Твої призначення й «нові» без виконавця — їх можна взяти в роботу одним тапом.
         </p>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="ghost" onClick={() => refresh().catch(() => {})}>
+        <div className="toolbar">
+          <button type="button" className="ghost" onClick={() => refresh().catch(() => {})}>
             Оновити
           </button>
         </div>
-        {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}
+        {error ? <p style={{ color: '#fecaca', marginTop: 12 }}>{error}</p> : null}
       </div>
 
-      <div style={{ height: 12 }} />
+      <div style={{ height: 14 }} />
 
-      <div className="card" style={{ textAlign: 'left' }}>
+      <div className="card">
         <h3 style={{ marginTop: 0 }}>Список</h3>
         {tickets.length === 0 ? <p className="muted">Нема задач.</p> : null}
 
         {tickets.map((t) => (
-          <div key={t.id} className="ticket">
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+          <div key={t.id} className="ticket-card">
+            <div className="ticket-card-meta">
               <div>
-                <span className="pill">{t.status}</span>{' '}
-                <span className="muted">{new Date(t.created_at).toLocaleString()}</span>
+                <span className="pill pill--status" data-status={t.status}>
+                  {t.status}
+                </span>{' '}
+                <span className="muted ticket-summary">{new Date(t.created_at).toLocaleString()}</span>
               </div>
-              <div className="muted" style={{ wordBreak: 'break-all' }}>
-                {t.id.slice(0, 8)}
-              </div>
+              <span className="mono-id">{t.id.slice(0, 8)}</span>
             </div>
-            <p style={{ marginBottom: 6 }}>{t.description}</p>
-            <p className="muted" style={{ fontSize: '0.88em', marginBottom: 8 }}>
-              <strong>Магазин:</strong> {t.store?.name ?? '—'}
+            <div className="ticket-card-title">{t.description}</div>
+            <div className="muted ticket-meta-box" style={{ marginBottom: 8 }}>
+              <div>
+                <span className="meta-label">Магазин</span> {t.store?.name ?? '—'}
+              </div>
               {t.creator?.full_name ? (
-                <>
-                  {' '}
-                  • <strong>Заявку подав:</strong> {t.creator.full_name}
-                </>
+                <div>
+                  <span className="meta-label">Заявку подав</span> {t.creator.full_name}
+                </div>
               ) : null}
-            </p>
+            </div>
 
-            {t.status === 'new' && !t.tech_id ? (
-              <button onClick={() => onClaim(t.id)}>Взяти в роботу</button>
+            <div className="btn-row">
+              {t.status === 'new' && !t.tech_id ? (
+                <button type="button" onClick={() => onClaim(t.id)}>
+                  Взяти в роботу
+                </button>
+              ) : null}
+
+              {t.status === 'in_progress' ? (
+                <button type="button" onClick={() => onFinish(t.id)}>
+                  Виконано → на підтвердження
+                </button>
+              ) : null}
+            </div>
+
+            {t.status === 'pending_confirmation' ? (
+              <p className="muted" style={{ marginTop: 10 }}>
+                Очікує підтвердження магазину.
+              </p>
             ) : null}
-
-            {t.status === 'in_progress' ? (
-              <button onClick={() => onFinish(t.id)}>Виконано → на підтвердження</button>
-            ) : null}
-
-            {t.status === 'pending_confirmation' ? <p className="muted">Очікує підтвердження магазину.</p> : null}
 
             <TechnicianStoreRating ticket={t} />
           </div>
