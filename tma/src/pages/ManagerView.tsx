@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { TicketStatusGroup } from '../components/TicketStatusGroup'
 import { groupTicketsByStatusOrdered, ticketStatusLabelUa, ticketStatusLabelUaOrDash } from '../lib/ticketStatus'
 import type { TicketHistoryRow, TicketWithContext } from '../lib/types'
 import { listTicketHistoryForTicketIds, listTicketsForManager } from '../lib/tickets'
@@ -63,15 +64,7 @@ export function ManagerView() {
         {tickets.length === 0 ? <p className="muted">Немає заявок.</p> : null}
 
         {ticketGroups.map(({ status: groupStatus, items, count }) => (
-          <section key={groupStatus}>
-            <div className="ticket-status-group-heading">
-              <div className="group-title-row">
-                <span className="pill pill--status" data-status={groupStatus}>
-                  {ticketStatusLabelUa(groupStatus)}
-                </span>
-              </div>
-              <span className="group-count-pill">{count}</span>
-            </div>
+          <TicketStatusGroup key={groupStatus} groupStatus={groupStatus} label={ticketStatusLabelUa(groupStatus)} count={count}>
             {items.map((t) => {
               const hist = historyByTicket[t.id] ?? []
               return (
@@ -130,7 +123,7 @@ export function ManagerView() {
             </div>
               )
             })}
-          </section>
+          </TicketStatusGroup>
         ))}
       </div>
     </div>

@@ -424,25 +424,69 @@ code {
   border-radius: 6px;
 }
 
-.ticket-status-group-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 16px 0 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.ticket-status-group-heading:first-child {
-  margin-top: 4px;
-}
-
 .group-title-row {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.ticket-status-collapsible {
+  margin-top: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(6, 8, 20, 0.32);
+  overflow: hidden;
+}
+
+.ticket-status-collapsible:first-of-type {
+  margin-top: 4px;
+}
+
+.ticket-status-collapsible-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.ticket-status-collapsible-summary::-webkit-details-marker {
+  display: none;
+}
+
+.ticket-status-collapsible-summary-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ticket-status-collapsible-summary::before {
+  content: '';
+  flex-shrink: 0;
+  border: solid rgba(248, 250, 252, 0.45);
+  border-width: 0 1.6px 1.6px 0;
+  padding: 2.8px;
+  transform: rotate(-45deg);
+  margin-right: 2px;
+}
+
+.ticket-status-collapsible[open] > .ticket-status-collapsible-summary::before {
+  transform: rotate(45deg);
+}
+
+.ticket-status-collapsible-body {
+  padding: 2px 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ticket-status-collapsible-body > .ticket-card:first-child {
+  margin-top: 8px;
 }
 
 .group-count-pill {

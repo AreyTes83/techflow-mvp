@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { TicketStatusGroup } from '../components/TicketStatusGroup'
 import { groupTicketsByStatusOrdered, ticketStatusLabelUa } from '../lib/ticketStatus'
 import type { TicketWithContext } from '../lib/types'
 import { claimTicket, listTicketsForTechnician, markPendingConfirmation } from '../lib/tickets'
@@ -102,15 +103,7 @@ export function TechnicianBoard() {
         {tickets.length === 0 ? <p className="muted">Нема задач.</p> : null}
 
         {ticketGroups.map(({ status: groupStatus, items, count }) => (
-          <section key={groupStatus}>
-            <div className="ticket-status-group-heading">
-              <div className="group-title-row">
-                <span className="pill pill--status" data-status={groupStatus}>
-                  {ticketStatusLabelUa(groupStatus)}
-                </span>
-              </div>
-              <span className="group-count-pill">{count}</span>
-            </div>
+          <TicketStatusGroup key={groupStatus} groupStatus={groupStatus} label={ticketStatusLabelUa(groupStatus)} count={count}>
             {items.map((t) => (
           <div key={t.id} className="ticket-card">
             <div className="ticket-card-meta">
@@ -157,7 +150,7 @@ export function TechnicianBoard() {
             <TechnicianStoreRating ticket={t} />
           </div>
             ))}
-          </section>
+          </TicketStatusGroup>
         ))}
       </div>
     </div>

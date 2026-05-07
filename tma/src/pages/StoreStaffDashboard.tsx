@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { StarRatingPicker } from '../components/StarRatingPicker'
+import { TicketStatusGroup } from '../components/TicketStatusGroup'
 import { groupTicketsByStatusOrdered, ticketStatusLabelUa } from '../lib/ticketStatus'
 import type { TicketWithContext } from '../lib/types'
 import { fetchMyStores } from '../lib/profile'
@@ -273,17 +274,14 @@ export function StoreStaffDashboard() {
 
         {openTickets.length === 0 ? <p className="muted">Немає поточних заявок.</p> : null}
         {openTicketGroups.map(({ status: groupStatus, items, count }) => (
-          <section key={`open-${groupStatus}`}>
-            <div className="ticket-status-group-heading">
-              <div className="group-title-row">
-                <span className="pill pill--status" data-status={groupStatus}>
-                  {ticketStatusLabelUa(groupStatus)}
-                </span>
-              </div>
-              <span className="group-count-pill">{count}</span>
-            </div>
+          <TicketStatusGroup
+            key={`open-${groupStatus}`}
+            groupStatus={groupStatus}
+            label={ticketStatusLabelUa(groupStatus)}
+            count={count}
+          >
             {items.map(renderTicketCard)}
-          </section>
+          </TicketStatusGroup>
         ))}
 
         <div style={{ height: 16 }} />
@@ -295,17 +293,14 @@ export function StoreStaffDashboard() {
 
         {archivedTickets.length === 0 ? <p className="muted">Поки немає завершених заявок.</p> : null}
         {archivedTicketGroups.map(({ status: groupStatus, items, count }) => (
-          <section key={`done-${groupStatus}`}>
-            <div className="ticket-status-group-heading">
-              <div className="group-title-row">
-                <span className="pill pill--status" data-status={groupStatus}>
-                  {ticketStatusLabelUa(groupStatus)}
-                </span>
-              </div>
-              <span className="group-count-pill">{count}</span>
-            </div>
+          <TicketStatusGroup
+            key={`done-${groupStatus}`}
+            groupStatus={groupStatus}
+            label={ticketStatusLabelUa(groupStatus)}
+            count={count}
+          >
             {items.map(renderTicketCard)}
-          </section>
+          </TicketStatusGroup>
         ))}
       </div>
     </div>
