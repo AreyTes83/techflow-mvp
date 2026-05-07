@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { groupTicketsByStatusOrdered, ticketStatusLabelUa, ticketStatusLabelUaOrDash } from '../lib/ticketStatus'
 import type { TicketHistoryRow, TicketWithContext } from '../lib/types'
 import { listTicketHistoryForTicketIds, listTicketsForManager } from '../lib/tickets'
 
@@ -7,6 +8,8 @@ export function ManagerView() {
   const [historyByTicket, setHistoryByTicket] = useState<Record<string, TicketHistoryRow[]>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const ticketGroups = useMemo(() => groupTicketsByStatusOrdered(tickets), [tickets])
 
   async function refresh() {
     setError(null)
@@ -56,17 +59,27 @@ export function ManagerView() {
       <div style={{ height: 14 }} />
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Усі тікети</h3>
-        {tickets.length === 0 ? <p className="muted">Нема тікетів.</p> : null}
+        <h3 style={{ marginTop: 0 }}>Усі заявки</h3>
+        {tickets.length === 0 ? <p className="muted">Немає заявок.</p> : null}
 
-        {tickets.map((t) => {
-          const hist = historyByTicket[t.id] ?? []
-          return (
+        {ticketGroups.map(({ status: groupStatus, items, count }) => (
+          <section key={groupStatus}>
+            <div className="ticket-status-group-heading">
+              <div className="group-title-row">
+                <span className="pill pill--status" data-status={groupStatus}>
+                  {ticketStatusLabelUa(groupStatus)}
+                </span>
+              </div>
+              <span className="group-count-pill">{count}</span>
+            </div>
+            {items.map((t) => {
+              const hist = historyByTicket[t.id] ?? []
+              return (
             <div key={t.id} className="ticket-card">
               <div className="ticket-card-meta">
                 <div>
                   <span className="pill pill--status" data-status={t.status}>
-                    {t.status}
+                    {ticketStatusLabelUa(t.status)}
                   </span>{' '}
                   <span className="muted ticket-summary">{new Date(t.created_at).toLocaleString()}</span>
                 </div>
@@ -102,7 +115,9 @@ export function ManagerView() {
                       <li key={h.id}>
                         <span className="muted">{new Date(h.changed_at).toLocaleString()}</span>
                         {' — '}
-                        {h.old_status == null ? `створено → ${h.new_status}` : `${h.old_status} → ${h.new_status}`}
+                        {h.old_status == null
+                          ? `створено → ${ticketStatusLabelUaOrDash(h.new_status)}`
+                          : `${ticketStatusLabelUaOrDash(h.old_status)} → ${ticketStatusLabelUaOrDash(h.new_status)}`}
                         {h.changed_by ? (
                           <span className="muted"> · {h.changed_by.slice(0, 8)}…</span>
                         ) : null}
@@ -113,8 +128,10 @@ export function ManagerView() {
                 </div>
               ) : null}
             </div>
-          )
-        })}
+              )
+            })}
+          </section>
+        ))}
       </div>
     </div>
   )

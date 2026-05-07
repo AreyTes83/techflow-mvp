@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { groupTicketsByStatusOrdered, ticketStatusLabelUa } from '../lib/ticketStatus'
 import type { TicketWithContext } from '../lib/types'
 import { claimTicket, listTicketsForTechnician, markPendingConfirmation } from '../lib/tickets'
 
@@ -36,6 +37,8 @@ export function TechnicianBoard() {
   const [tickets, setTickets] = useState<TicketWithContext[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const ticketGroups = useMemo(() => groupTicketsByStatusOrdered(tickets), [tickets])
 
   async function refresh() {
     setError(null)
@@ -98,12 +101,22 @@ export function TechnicianBoard() {
         <h3 style={{ marginTop: 0 }}>Список</h3>
         {tickets.length === 0 ? <p className="muted">Нема задач.</p> : null}
 
-        {tickets.map((t) => (
+        {ticketGroups.map(({ status: groupStatus, items, count }) => (
+          <section key={groupStatus}>
+            <div className="ticket-status-group-heading">
+              <div className="group-title-row">
+                <span className="pill pill--status" data-status={groupStatus}>
+                  {ticketStatusLabelUa(groupStatus)}
+                </span>
+              </div>
+              <span className="group-count-pill">{count}</span>
+            </div>
+            {items.map((t) => (
           <div key={t.id} className="ticket-card">
             <div className="ticket-card-meta">
               <div>
                 <span className="pill pill--status" data-status={t.status}>
-                  {t.status}
+                  {ticketStatusLabelUa(t.status)}
                 </span>{' '}
                 <span className="muted ticket-summary">{new Date(t.created_at).toLocaleString()}</span>
               </div>
@@ -143,6 +156,8 @@ export function TechnicianBoard() {
 
             <TechnicianStoreRating ticket={t} />
           </div>
+            ))}
+          </section>
         ))}
       </div>
     </div>

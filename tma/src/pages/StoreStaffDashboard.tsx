@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { StarRatingPicker } from '../components/StarRatingPicker'
+import { groupTicketsByStatusOrdered, ticketStatusLabelUa } from '../lib/ticketStatus'
 import type { TicketWithContext } from '../lib/types'
 import { fetchMyStores } from '../lib/profile'
 import { confirmAndRateTicket, createTicket, listTicketsForStoreStaff, rateTicket } from '../lib/tickets'
@@ -100,23 +101,6 @@ function CompletedRatingForm({
   )
 }
 
-function ticketStatusLabel(status: TicketWithContext['status']): string {
-  switch (status) {
-    case 'new':
-      return 'Нова'
-    case 'in_progress':
-      return 'У роботі'
-    case 'pending_confirmation':
-      return 'Очікує підтвердження'
-    case 'completed':
-      return 'Очікує вашу оцінку'
-    case 'rated':
-      return 'Завершено й оцінено'
-    default:
-      return status
-  }
-}
-
 function ticketStatusHint(status: TicketWithContext['status']) {
   switch (status) {
     case 'new':
@@ -126,7 +110,7 @@ function ticketStatusHint(status: TicketWithContext['status']) {
     case 'pending_confirmation':
       return ''
     case 'completed':
-      return 'Виконання підтверджено; залиш оцінку нижче.'
+      return 'Заявку закрито на боці техніки; потрібна твоя оцінка — заповни блок нижче.'
     case 'rated':
       return ''
     default:
@@ -146,6 +130,8 @@ export function StoreStaffDashboard() {
 
   const openTickets = useMemo(() => tickets.filter((t) => t.status !== 'rated'), [tickets])
   const archivedTickets = useMemo(() => tickets.filter((t) => t.status === 'rated'), [tickets])
+  const openTicketGroups = useMemo(() => groupTicketsByStatusOrdered(openTickets), [openTickets])
+  const archivedTicketGroups = useMemo(() => groupTicketsByStatusOrdered(archivedTickets), [archivedTickets])
 
   function renderTicketCard(t: TicketWithContext) {
     const hint = ticketStatusHint(t.status)
@@ -154,7 +140,7 @@ export function StoreStaffDashboard() {
         <div className="ticket-card-meta">
           <div>
             <span className="pill pill--status" data-status={t.status}>
-              {ticketStatusLabel(t.status)}
+              {ticketStatusLabelUa(t.status)}
             </span>{' '}
             <span className="muted ticket-summary">{new Date(t.created_at).toLocaleString()}</span>
           </div>
@@ -286,7 +272,19 @@ export function StoreStaffDashboard() {
         </p>
 
         {openTickets.length === 0 ? <p className="muted">Немає поточних заявок.</p> : null}
-        {openTickets.map(renderTicketCard)}
+        {openTicketGroups.map(({ status: groupStatus, items, count }) => (
+          <section key={`open-${groupStatus}`}>
+            <div className="ticket-status-group-heading">
+              <div className="group-title-row">
+                <span className="pill pill--status" data-status={groupStatus}>
+                  {ticketStatusLabelUa(groupStatus)}
+                </span>
+              </div>
+              <span className="group-count-pill">{count}</span>
+            </div>
+            {items.map(renderTicketCard)}
+          </section>
+        ))}
 
         <div style={{ height: 16 }} />
 
@@ -296,7 +294,19 @@ export function StoreStaffDashboard() {
         </p>
 
         {archivedTickets.length === 0 ? <p className="muted">Поки немає завершених заявок.</p> : null}
-        {archivedTickets.map(renderTicketCard)}
+        {archivedTicketGroups.map(({ status: groupStatus, items, count }) => (
+          <section key={`done-${groupStatus}`}>
+            <div className="ticket-status-group-heading">
+              <div className="group-title-row">
+                <span className="pill pill--status" data-status={groupStatus}>
+                  {ticketStatusLabelUa(groupStatus)}
+                </span>
+              </div>
+              <span className="group-count-pill">{count}</span>
+            </div>
+            {items.map(renderTicketCard)}
+          </section>
+        ))}
       </div>
     </div>
   )
